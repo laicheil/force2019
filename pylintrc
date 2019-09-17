@@ -1,0 +1,25 @@
+# https://github.com/PyCQA/pylint/blob/master/pylintrc
+# https://pylint.readthedocs.io/en/latest/user_guide/run.html
+# https://pylint.readthedocs.io/en/latest/user_guide/options.html
+# https://pylint.readthedocs.io/en/latest/faq.html
+
+# vimdiff <(pylint --generate-rcfile) pylintrc
+
+[MASTER]
+
+# Add files or directories to the blacklist. They should be base names, not
+# paths.
+ignore=_version.py,versioneer.py
+
+# Add files or directories matching the regex patterns to the blacklist. The
+# regex matches against base names, not paths.
+ignore-patterns=.eggs/*
+[MESSAGES CONTROL]
+disable=
+    missing-docstring,
+    bad-continuation,
+    invalid-name,
+
+[SIMILARITIES]
+ignore-imports=yes
+min-similarity-lines=25
