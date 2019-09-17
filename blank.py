@@ -1,2 +1,4 @@
 #!/usr/bin/env python3
-print("hello here ...")
+
+def something():
+    print("hello here ...")
