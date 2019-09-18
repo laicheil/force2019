@@ -94,6 +94,7 @@ class MyModel:
         train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(self.data, self.labels_ce, test_size=.334)
         self.train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
         self.validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+        self.test_ce_generator = self.validation_ce_generator
 
         logger.info("done ...");
 
@@ -136,39 +137,49 @@ class MyModel:
                       metrics=['accuracy'])
         logger.info("done ...");
 
-    def evaluate(self):
-        self.model.fit_generator(self.train_ce_generator, steps_per_epoch=int(self.train_samples.shape[0]), epochs=100,validation_data=self.validation_ce_generator)
+    def evaluate(self, epochs=None):
+        if epochs is None:
+            epochs = 100
+        logger.info("epochs=%s", epochs);
+        self.model.fit_generator(self.train_ce_generator, steps_per_epoch=int(self.train_samples.shape[0]), epochs=epochs,validation_data=self.validation_ce_generator)
         self.evaluation = model.evaluate_generator(validation_ce_generator)
 
         logger.info("done ...");
 
-    def evaluate_k(self):
+    def evaluate_k(self,epochs=None):
+        if epochs is None:
+            epochs = 16
+        logger.info("epochs=%s", epochs);
         k_checkpoint_basename = os.path.join(script_vardir, 'CHK_' + self.date_str + '_K')
         kf = KFold (shuffle=True, n_splits=5)
         last_good_model_weights = ''
         k=0
         for train_index, test_index in kf.split(self.data, self.labels_ce):
-          print('At fold K=',k,' with ', len(train_index), ' samples out of total ', self.data.shape[0])
-          kf_filepath=k_checkpoint_basename + str(k) + '.hdf5'
-          logger.info("kf_filepath=%s", kf_filepath);
-          self.callbacks[-1].filepath = kf_filepath
-          history = self.model.fit_generator (generator       = self.datagen.flow(self.data[train_index], self.labels_ce[train_index], batch_size=16),
-                                         validation_data = self.datagen.flow(self.data[test_index] , self.labels_ce[test_index] , batch_size=16),
-                                         steps_per_epoch = int(self.data.shape[0]/4),
-                                         epochs          = 16,
-                                         callbacks       = self.callbacks)
-          if os.path.isfile(kf_filepath):
-            self.model.load_weights (kf_filepath) #Load best
-            last_good_model_weights = kf_filepath
-          elif os.path.isfile(last_good_model_weights):
-            self.model.load_weights (last_good_model_weights)
-            self.evaluation = self.model.evaluate_generator(test_ce_generator)
-            print ('Evaluation Mean Squared Error on test data for k =', k, 'is:', evaluation*100.)
-            folds_map [k] = {
-                'evaluation'   : evaluation,
-                'history'      : history,
-                'filepath'     : kf_filepath }
-            k += 1
+            print('At fold K=',k,' with ', len(train_index), ' samples out of total ', self.data.shape[0])
+            kf_filepath=k_checkpoint_basename + str(k) + '.hdf5'
+            logger.info("kf_filepath=%s", kf_filepath);
+            self.callbacks[-1].filepath = kf_filepath
+            logger.info("before fit_generator ...")
+            history = self.model.fit_generator (generator       = self.datagen.flow(self.data[train_index], self.labels_ce[train_index], batch_size=16),
+                                           validation_data = self.datagen.flow(self.data[test_index] , self.labels_ce[test_index] , batch_size=16),
+                                           steps_per_epoch = int(self.data.shape[0]/4),
+                                           epochs          = epochs,
+                                           callbacks       = self.callbacks)
+            logger.info("After fit_generator ...")
+            if os.path.isfile(kf_filepath):
+                logger.info("isfile(%s) = True ...", kf_filepath)
+                #self.model.load_weights (kf_filepath) #Load best
+                last_good_model_weights = kf_filepath
+            if os.path.isfile(last_good_model_weights):
+                logger.info("isfile(%s) = True ...", last_good_model_weights)
+                self.model.load_weights (last_good_model_weights)
+                self.evaluation = self.model.evaluate_generator(self.test_ce_generator)
+                print ('Evaluation:', self.evaluation)
+                folds_map [k] = {
+                    'evaluation'   : self.evaluation,
+                    'history'      : history,
+                    'filepath'     : kf_filepath }
+                k += 1
 
 class Application:
     def __init__(self):
@@ -183,9 +194,9 @@ class Application:
             weights = None
         model.compile_model(weights)
         if parse_result.eval_k:
-            model.evaluate_k()
+            model.evaluate_k(parse_result.epochs)
         else:
-            model.evaluate()
+            model.evaluate(parse_result.epochs)
 
     def main(self):
         # pylint: disable=too-many-statements
@@ -208,6 +219,8 @@ class Application:
             default=False, required=False)
         apn_current.parser.add_argument("--eval-k", dest="eval_k", action="store_true",
             default=False, required=False)
+        apn_current.parser.add_argument("--epochs", dest="epochs", action="store",
+            type=int, default=None, required=False)
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
         parse_result = self.parse_result = apn_root.parser.parse_args(args=sys.argv[1:])

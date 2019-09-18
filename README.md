@@ -11,6 +11,8 @@ laicheil.force2019.cli stage-one --skip-weights --from ..\force2019-data-000\dat
 
 # linux
 laicheil.force2019.cli stage-one --skip-weights --from ../force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --skip-weights --epochs 1 --from ../force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --skip-weights --epochs 1 --eval-k --from ../force2019-data-000/data-000/
 ```
 
 ```bash
@@ -41,23 +43,28 @@ Then first time run
 !pip3 install --user --upgrade --editable force2019
 ```
 
-After run:
+Run every iteration:
 
 ```bash
 !git -C force2019 pull
 !git -C force2019-data-000 pull
-!python3 -m laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+!python3 -m laicheil.force2019.cli stage-one --from force2019-data-000/data-000/
+```
+
+```bash
+!python3 -m laicheil.force2019.cli stage-one --epochs 1 force2019-data-000/data-000/
+!python3 -m laicheil.force2019.cli stage-one --epochs 1 --eval-k force2019-data-000/data-000/
 ```
 
 ## load data
 
 ```bash
-laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --from force2019-data-000/data-000/
 ```
 
 ```
 20190918T101939 iwana@iwana-ub.zoic.eu.org:~/d/github.com/laicheil
-$ laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+$ laicheil.force2019.cli stage-one --from force2019-data-000/data-000/
 2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:83:main start ...
 2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:45:load_files labels shape (200,)
 2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:46:load_files data shape (200, 40, 39, 1)

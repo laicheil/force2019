@@ -79,6 +79,8 @@ train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce =
 train_ce_generator         = datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
 validation_ce_generator    = datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
 
+test_ce_generator = validation_ce_generator
+
 """[link text](https://)Loading the ResNet50 model from the tensorflow-keras library"""
 
 from tensorflow.keras.applications.resnet50 import ResNet50
@@ -157,20 +159,21 @@ for train_index, test_index in kf.split(data, labels_ce):
   history = model.fit_generator (generator       = datagen.flow(data[train_index], labels_ce[train_index], batch_size=16), 
                                  validation_data = datagen.flow(data[test_index] , labels_ce[test_index] , batch_size=16),
                                  steps_per_epoch = int(data.shape[0]/4), 
-                                 epochs          = 16, 
+                                 epochs          = 1, 
                                  callbacks       = callbacks)
   if os.path.isfile(kf_filepath):
-    model.load_weights (kf_filepath) #Load best
+    #model.load_weights (kf_filepath) #Load best
     last_good_model_weights = kf_filepath
-  elif os.path.isfile(last_good_model_weights):
+  if os.path.isfile(last_good_model_weights):
     model.load_weights (last_good_model_weights)
-    evaluation = model.evaluate_generator(test_ce_generator)
-    print ('Evaluation Mean Squared Error on test data for k =', k, 'is:', evaluation*100.)
-    folds_map [k] = {
-        'evaluation'   : evaluation,
-        'history'      : history,
-        'filepath'     : kf_filepath } 
-    k += 1
+  evaluation = model.evaluate_generator(test_ce_generator)
+  #print ('Evaluation Mean Squared Error on test data for k =', k, 'is:', evaluation*100.)
+  print ('Evaluation:', evaluation)
+  folds_map [k] = {
+      'evaluation'   : evaluation,
+      'history'      : history,
+      'filepath'     : kf_filepath } 
+  k += 1
 
 evaluation = model.evaluate_generator(validation_ce_generator)
 predict = model.predict_generator(validation_ce_generator)
