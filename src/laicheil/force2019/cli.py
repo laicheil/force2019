@@ -43,17 +43,22 @@ class Application:
         self.apn_root = ArgParseNode(options={"add_help": True})
 
     def load_files(self, parse_result):
-        data_path = parse_result.fromdir
+
+        data_path = 'hackathon_training_data'
         list_of_files = os.listdir(data_path)
         num_of_files = len(list_of_files)
         first_file_path = os.path.join(data_path, list_of_files[0])
+        #print (first_file_path)
         with open(first_file_path,'r') as read_file:
           shape_of_files = (num_of_files,) + np.asarray(json.load(read_file)).shape + (1, )
+        #print (shape_of_files)
         data = np.zeros((shape_of_files))
         labels = np.zeros(num_of_files)
+        labels_ce = np.zeros((num_of_files,2))
         for i, filename in enumerate(os.listdir(data_path)):
             full_path = os.path.join(data_path,filename)
             labels[i] = int(filename.startswith('good'))
+            labels_ce[i, int(filename.startswith('good'))] = 1
             with open(full_path,'r') as read_file:
                 data[i, :, :, 0] = np.asarray(json.load(read_file))
 
