@@ -157,7 +157,7 @@ class MyModel:
         logger.info("steps_per_epoch=%s", steps_per_epoch);
 
         self.model.fit_generator(self.train_ce_generator, steps_per_epoch=steps_per_epoch, epochs=epochs,validation_data=self.validation_ce_generator)
-        self.evaluation = model.evaluate_generator(validation_ce_generator)
+        self.evaluation = self.model.evaluate_generator(self.validation_ce_generator)
 
         logger.info("done ...");
 
@@ -243,6 +243,8 @@ class Application:
         apn_current.parser.add_argument("--epochs", dest="epochs", action="store",
             type=int, default=None, required=False)
         apn_current.parser.add_argument("--batch-size", dest="batch_size", action="store",
+            type=int, default=None, required=False)
+        apn_current.parser.add_argument("--steps-per-epoch", dest="steps_per_epoch", action="store",
             type=int, default=None, required=False)
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
