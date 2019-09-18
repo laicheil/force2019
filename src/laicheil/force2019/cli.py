@@ -89,15 +89,17 @@ class Application:
         ## from grayscale to RGB, Xception needs 3 Channel input
         x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
         base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
-        x = Dense(1000, activation='ReLU')()
-        output = Dense(1, activation='softmax')(base_model.output)
+        output = Flatten()(base_model.output)
+        output = Dense(1000, activation='relu')(output)
+        output = Dense(100, activation='relu')(output)
+        output = Dense(2, activation='softmax')(output)
         ## The model
         num_layers = len(base_model.layers)
         for i, layer in enumerate (base_model.layers):
           layer.trainable = i < 8 or i > num_layers-8
         model = Model (inputs=inputs, outputs=output)
         model.compile(optimizer='nadam',
-                      loss='mean_squared_error',
+                      loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
         logger.info("done compiling model");
