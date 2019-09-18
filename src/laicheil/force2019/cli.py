@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# vim: set filetype=python sts=4 ts=4 sw=4 expandtab tw=100 cc=+1:
+# vim: set filetype=python sts=4 ts=4 sw=4 expandtab:
 """
 Command line interface module
 """
@@ -18,23 +18,22 @@ import json
 import os
 
 import numpy as np
+import tensorflow as tf
+import sklearn as skl
 
-from tensorflow.keras.preprocessing import image
-from sklearn.model_selection import train_test_split
 
 from .argparse_tree import ArgParseNode
 from . import __version__
 
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
-
+from tensorflow.keras.preprocessing import image
 from tensorflow.python.keras import backend as K
-
-import tensorflow as tf
-
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input,Lambda, Dense, Flatten
 from tensorflow.image import grayscale_to_rgb
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 
 logger = logging.getLogger(__name__)
 
@@ -76,16 +75,18 @@ class MyModel:
             vertical_flip=True,
             horizontal_flip=True,
             rotation_range=90)
-        self.datagen.fit(self.data)
+        self.datagen.fit (self.data)
 
         self.train_samples, validation_samples, train_labels, validation_labels = train_test_split(self.data, self.labels, test_size=.334)
 
         train_generator         = self.datagen.flow(self.train_samples, train_labels, batch_size=32)
         validation_generator    = self.datagen.flow(validation_samples , validation_labels , batch_size=32)
 
+
         train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(self.data, self.labels_ce, test_size=.334)
         self.train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
         self.validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+
         logger.info("done ...");
 
     def compile_model(self, weights):
