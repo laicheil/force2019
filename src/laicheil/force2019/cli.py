@@ -21,10 +21,18 @@ import numpy as np
 import tensorflow as tf
 import sklearn as skl
 
+logger = logging.getLogger(__name__)
+
+script_dirname = os.path.dirname(__file__)
+script_dirnamea = os.path.abspath(script_dirname)
+script_basename = os.path.basename(__file__)
+script_vardir = os.path.join(script_dirnamea,"..","..","..","var")
+
 
 from .argparse_tree import ArgParseNode
 from . import __version__
 
+from tensorflow.python.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from tensorflow.keras.preprocessing import image
@@ -99,6 +107,15 @@ class MyModel:
 
         logger.info('DONE LOADING MODEL')
 
+        self.now = datetime.datetime.now ()
+        #self.date_str = self.now.strftime('%Y%m%d%H%M')
+        self.date_str = "always"
+        self.checkpoint_init_name = 'init_chkpnt_'+self.date_str+'.hdf5'
+        self.callbacks = [
+            EarlyStopping (monitor='val_acc', patience=9, verbose=1),
+            ModelCheckpoint(self.checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1)
+        ]
+
         ## inputs
         self.inputs = Input (shape=self.data.shape[1:])#samples.shape[1:]
         #
@@ -125,6 +142,34 @@ class MyModel:
 
         logger.info("done ...");
 
+    def evaluate_k(self):
+        k_checkpoint_basename = os.path.join(script_vardir, 'CHK_' + self.date_str + '_K')
+        kf = KFold (shuffle=True, n_splits=5)
+        last_good_model_weights = ''
+        k=0
+        for train_index, test_index in kf.split(self.data, self.labels_ce):
+          print('At fold K=',k,' with ', len(train_index), ' samples out of total ', self.data.shape[0])
+          kf_filepath=k_checkpoint_basename + str(k) + '.hdf5'
+          logger.info("kf_filepath=%s", kf_filepath);
+          self.callbacks[-1].filepath = kf_filepath
+          history = self.model.fit_generator (generator       = self.datagen.flow(self.data[train_index], self.labels_ce[train_index], batch_size=16),
+                                         validation_data = self.datagen.flow(self.data[test_index] , self.labels_ce[test_index] , batch_size=16),
+                                         steps_per_epoch = int(self.data.shape[0]/4),
+                                         epochs          = 16,
+                                         callbacks       = self.callbacks)
+          if os.path.isfile(kf_filepath):
+            self.model.load_weights (kf_filepath) #Load best
+            last_good_model_weights = kf_filepath
+          elif os.path.isfile(last_good_model_weights):
+            self.model.load_weights (last_good_model_weights)
+            self.evaluation = self.model.evaluate_generator(test_ce_generator)
+            print ('Evaluation Mean Squared Error on test data for k =', k, 'is:', evaluation*100.)
+            folds_map [k] = {
+                'evaluation'   : evaluation,
+                'history'      : history,
+                'filepath'     : kf_filepath }
+            k += 1
+
 class Application:
     def __init__(self):
         self.apn_root = ArgParseNode(options={"add_help": True})
@@ -137,7 +182,10 @@ class Application:
         if parse_result.skip_weights:
             weights = None
         model.compile_model(weights)
-        model.evaluate()
+        if parse_result.eval_k:
+            model.evaluate_k()
+        else:
+            model.evaluate()
 
     def main(self):
         # pylint: disable=too-many-statements
@@ -149,19 +197,13 @@ class Application:
             action="count", dest="verbosity",
             help="increase verbosity level")
 
-        apn_current = apn_eventgrid = apn_root.get("load_files")
-        apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
-        apn_current.parser.add_argument("--weights", dest="weights", action="store",
-            type=str, default="imagenet", required=False)
-        apn_current.parser.add_argument("--skip-weights", dest="skip_weights", action="store_true",
-            default=False, required=False)
-        apn_current.parser.set_defaults(handler=self.handle_stage_one)
-
         apn_current = apn_eventgrid = apn_root.get("stage-one")
         apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
         apn_current.parser.add_argument("--weights", dest="weights", action="store",
             type=str, default="imagenet", required=False)
         apn_current.parser.add_argument("--skip-weights", dest="skip_weights", action="store_true",
+            default=False, required=False)
+        apn_current.parser.add_argument("--eval-k", dest="eval_k", action="store_true",
             default=False, required=False)
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
@@ -185,7 +227,7 @@ class Application:
             sys.argv, parse_result, logging.getLogger("").getEffectiveLevel(),
             logger.getEffectiveLevel())
 
-        logger.info("start ...");
+        logger.info("start ... script_vardir = %s", script_vardir);
 
         if "handler" in parse_result and parse_result.handler:
             parse_result.handler(parse_result)

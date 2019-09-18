@@ -106,8 +106,8 @@ date_str = now.strftime('%Y%m%d%H%M')
 checkpoint_init_name = 'init_chkpnt_'+date_str+'.hdf5'
 from tensorflow.python.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 callbacks = [ 
-        EarlyStopping (patience=9, verbose=1),
-        ModelCheckpoint(checkpoint_init_name, save_best_only=True, save_weights_only=True, verbose=1)
+        EarlyStopping (monitor='val_acc', patience=9, verbose=1),
+        ModelCheckpoint(checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1)
         ]
 
 from tensorflow.keras.models import Model
@@ -151,18 +151,18 @@ kf = KFold (shuffle=True, n_splits=5)
 last_good_model_weights = ''
 k=0
 for train_index, test_index in kf.split(data, labels_ce):
-  print('At fold K=',k,' with ', train)
+  print('At fold K=',k,' with ', len(train_index), ' samples out of total ', data.shape[0])
   kf_filepath=k_checkpoint_basename + str(k) + '.hdf5'
   callbacks[-1].filepath = kf_filepath
   history = model.fit_generator (generator       = datagen.flow(data[train_index], labels_ce[train_index], batch_size=16), 
                                  validation_data = datagen.flow(data[test_index] , labels_ce[test_index] , batch_size=16),
-                                 steps_per_epoch = int(data.shape[0]), 
+                                 steps_per_epoch = int(data.shape[0]/4), 
                                  epochs          = 16, 
                                  callbacks       = callbacks)
-  if path.isfile(kf_filepath):
+  if os.path.isfile(kf_filepath):
     model.load_weights (kf_filepath) #Load best
     last_good_model_weights = kf_filepath
-  elif path.isfile(last_good_model_weights):
+  elif os.path.isfile(last_good_model_weights):
     model.load_weights (last_good_model_weights)
     evaluation = model.evaluate_generator(test_ce_generator)
     print ('Evaluation Mean Squared Error on test data for k =', k, 'is:', evaluation*100.)
@@ -171,3 +171,9 @@ for train_index, test_index in kf.split(data, labels_ce):
         'history'      : history,
         'filepath'     : kf_filepath } 
     k += 1
+
+evaluation = model.evaluate_generator(validation_ce_generator)
+predict = model.predict_generator(validation_ce_generator)
+
+print(evaluation)
+print(predict)
