@@ -44,7 +44,7 @@ class Application:
 
     def load_files(self, parse_result):
 
-        data_path = 'hackathon_training_data'
+        data_path = parse_result.fromdir
         list_of_files = os.listdir(data_path)
         num_of_files = len(list_of_files)
         first_file_path = os.path.join(data_path, list_of_files[0])
