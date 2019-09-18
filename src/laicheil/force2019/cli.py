@@ -43,6 +43,8 @@ from tensorflow.image import grayscale_to_rgb
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 
+import tensorflow.keras.callbacks as tfkc
+
 logger = logging.getLogger(__name__)
 
 class MyModel:
@@ -112,7 +114,9 @@ class MyModel:
         #self.date_str = self.now.strftime('%Y%m%d%H%M')
         self.date_str = "always"
         self.checkpoint_init_name = 'init_chkpnt_'+self.date_str+'.hdf5'
+
         self.callbacks = [
+            tfkc.TensorBoard(log_dir=os.path.join(script_vardir, 'tbg'), histogram_freq=0, write_graph=True, write_images=True),
             EarlyStopping (monitor='val_acc', patience=9, verbose=1),
             ModelCheckpoint(self.checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1)
         ]
@@ -135,12 +139,14 @@ class MyModel:
         self.model.compile(optimizer='nadam',
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
+
         logger.info("done ...");
 
     def evaluate(self, epochs=None):
         if epochs is None:
             epochs = 100
         logger.info("epochs=%s", epochs);
+
         self.model.fit_generator(self.train_ce_generator, steps_per_epoch=int(self.train_samples.shape[0]), epochs=epochs,validation_data=self.validation_ce_generator)
         self.evaluation = model.evaluate_generator(validation_ce_generator)
 
