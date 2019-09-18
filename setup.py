@@ -45,6 +45,7 @@ setuptools.setup(
     },
     install_requires=[
         "tensorflow>=1.14",
+        "scikit-learn>=0.21.3",
     ],
     setup_requires=["pytest-runner", "pytest-pylint"],
     tests_require=["pytest", "pylint"],
