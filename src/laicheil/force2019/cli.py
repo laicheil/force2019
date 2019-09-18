@@ -38,7 +38,7 @@ from tensorflow.image import grayscale_to_rgb
 
 logger = logging.getLogger(__name__)
 
-class Model:
+class MyModel:
     def __init__(self):
         pass
 
@@ -129,7 +129,7 @@ class Application:
         self.apn_root = ArgParseNode(options={"add_help": True})
 
     def handle_stage_one(self, parse_result):
-        model = Model()
+        model = MyModel()
         model.load_files(parse_result.fromdir)
         model.add_data_augmentation()
         model.compile_model()
@@ -156,7 +156,7 @@ class Application:
                 data[i, :, :, 0] = np.asarray(json.load(read_file))
 
         logger.info('labels shape %s', labels.shape)
-        logger.info('labels for CE shape', labels_ce.shape)
+        logger.info('labels for CE shape %s', labels_ce.shape)
         logger.info('data shape %s', data.shape)
 
         datagen = image.ImageDataGenerator (
@@ -192,7 +192,10 @@ class Application:
         #
         ## from grayscale to RGB, Xception needs 3 Channel input
         x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
-        base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
+        if parse_result.skip_weights:
+            base_model = ResNet50(weights=None, input_tensor=x,include_top=False)
+        else:
+            base_model = ResNet50(weights=parse_result.weights, input_tensor=x,include_top=False)
         output = Flatten()(base_model.output)
         output = Dense(1000, activation='relu')(output)
         output = Dense(100, activation='relu')(output)
@@ -201,7 +204,7 @@ class Application:
         num_layers = len(base_model.layers)
         for i, layer in enumerate (base_model.layers):
           layer.trainable = i < 8 or i > num_layers-8
-        model = Model (inputs=inputs, outputs=output)
+        model = Model(inputs=inputs, outputs=output)
         model.compile(optimizer='nadam',
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
@@ -225,6 +228,10 @@ class Application:
 
         apn_current = apn_eventgrid = apn_root.get("load_files")
         apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
+        apn_current.parser.add_argument("--weights", dest="weights", action="store",
+            type=str, default="imagenet", required=False)
+        apn_current.parser.add_argument("--skip-weights", dest="skip_weights", action="store_true",
+            default=False, required=False)
         apn_current.parser.set_defaults(handler=self.handle_load_files)
 
         apn_current = apn_eventgrid = apn_root.get("stage-one")
