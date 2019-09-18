@@ -32,6 +32,10 @@ from tensorflow.python.keras import backend as K
 
 import tensorflow as tf
 
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input,Lambda, Dense
+from tensorflow.image import grayscale_to_rgb
+
 logger = logging.getLogger(__name__)
 
 class Application:
@@ -78,6 +82,25 @@ class Application:
 
         logger.info('DONE LOADING MODEL')
 
+
+        ## inputs
+        inputs = Input (shape=data.shape[1:])#samples.shape[1:]
+        #
+        ## from grayscale to RGB, Xception needs 3 Channel input
+        x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
+        base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
+        x = Dense(1000, activation='ReLU')()
+        output = Dense(1, activation='softmax')(base_model.output)
+        ## The model
+        num_layers = len(base_model.layers)
+        for i, layer in enumerate (base_model.layers):
+          layer.trainable = i < 8 or i > num_layers-8
+        model = Model (inputs=inputs, outputs=output)
+        model.compile(optimizer='nadam',
+                      loss='mean_squared_error',
+                      metrics=['accuracy'])
+
+        logger.info("done compiling model");
 
     def main(self):
         # pylint: disable=too-many-statements
