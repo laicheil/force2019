@@ -1,6 +1,8 @@
 # force2019
 
 ```bash
+## run this to install module symlink
+## (so it can be used from anywhere, don't have to be in directory)
 pip3 install --user --upgrade --editable .
 laicheil.force2019.cli --help
 laicheil.force2019.cli

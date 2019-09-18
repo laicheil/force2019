@@ -16,10 +16,21 @@ import uuid
 import datetime
 import json
 import os
+
 import numpy as np
+
+from tensorflow.keras.preprocessing import image
+from sklearn.model_selection import train_test_split
 
 from .argparse_tree import ArgParseNode
 from . import __version__
+
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
+
+from tensorflow.python.keras import backend as K
+
+import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +55,28 @@ class Application:
 
         logger.info('labels shape %s', labels.shape)
         logger.info('data shape %s', data.shape)
+
+        datagen = image.ImageDataGenerator (
+            featurewise_center = True,
+            featurewise_std_normalization=True,
+            vertical_flip=True,
+            horizontal_flip=True,
+            rotation_range=90)
+        datagen.fit (data)
+
+        train_samples, validation_samples, train_labels, validation_labels = train_test_split(data, labels, test_size=.334)
+
+        train_generator         = datagen.flow(train_samples, train_labels, batch_size=32)
+        validation_generator    = datagen.flow(validation_samples , validation_labels , batch_size=32)
+
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        #config.gpu_options.per_process_gpu_memory_fraction = 0.33
+
+        #with tf.device('/device:GPU:0'):
+        K.set_session (tf.Session (config = config))
+
+        logger.info('DONE LOADING MODEL')
 
 
     def main(self):
