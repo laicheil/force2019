@@ -24,6 +24,26 @@ something()
 !laicheil.force2019.cli
 ```
 
+## run from git in colab
+
+Go to https://colab.research.google.com
+
+Then first time run
+
+```bash
+!git clone https://github.com/laicheil/force2019.git
+!git clone https://github.com/laicheil/force2019-data-000.git
+```
+
+After run:
+
+```bash
+!git -C force2019 pull
+!git -C force2019-data-000 pull
+!pip3 install --user --upgrade --editable force2019
+!python3 -m laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+```
+
 ## load data
 
 ```bash
