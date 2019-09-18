@@ -22,14 +22,18 @@ something()
 !laicheil.force2019.cli
 ```
 
-## scratch
+## load data
+
+```bash
+laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+```
 
 ```
-20190918T101732 iwana@iwana-ub.zoic.eu.org:~/d/github.com/laicheil/force2019-data-000
-$ laicheil.force2019.cli load_files --from data-000/
-2019-09-18T10:17:34 27013 7f6f7aca6680 020:INFO     laicheil.force2019.cli cli:83:main start ...
-2019-09-18T10:17:34 27013 7f6f7aca6680 020:INFO     laicheil.force2019.cli cli:45:load_files labels shape (200,)
-2019-09-18T10:17:34 27013 7f6f7aca6680 020:INFO     laicheil.force2019.cli cli:46:load_files data shape (200, 40, 39, 1)
+20190918T101939 iwana@iwana-ub.zoic.eu.org:~/d/github.com/laicheil
+$ laicheil.force2019.cli load_files --from force2019-data-000/data-000/
+2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:83:main start ...
+2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:45:load_files labels shape (200,)
+2019-09-18T10:19:42 27444 7f2ac3a67680 020:INFO     laicheil.force2019.cli cli:46:load_files data shape (200, 40, 39, 1)
 ```
 
 ## ...
