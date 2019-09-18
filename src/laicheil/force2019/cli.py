@@ -51,7 +51,7 @@ class MyModel:
     def __init__(self):
         pass
 
-    def load_files(self, data_path):
+    def load_files(self, data_path, limit=None):
         list_of_files = os.listdir(data_path)
         num_of_files = len(list_of_files)
         first_file_path = os.path.join(data_path, list_of_files[0])
@@ -63,6 +63,9 @@ class MyModel:
         self.labels = np.zeros(num_of_files)
         self.labels_ce = np.zeros((num_of_files,2))
         for i, filename in enumerate(os.listdir(data_path)):
+            if limit is not None and i >= limit:
+                logger.info("Not loading more files as %s files have been loaded", limit);
+                break
             full_path = os.path.join(data_path,filename)
             self.labels[i] = int(filename.startswith('good'))
             self.labels_ce[i, int(filename.startswith('good'))] = 1
@@ -77,8 +80,10 @@ class MyModel:
         logger.debug(os.listdir(data_path))
         logger.info("done ...");
 
-    def add_data_augmentation(self):
+    def add_data_augmentation(self, batch_size=None):
 
+        if batch_size is None:
+            batch_size=32
         self.datagen = image.ImageDataGenerator (
             featurewise_center = True,
             featurewise_std_normalization=True,
@@ -89,13 +94,13 @@ class MyModel:
 
         self.train_samples, validation_samples, train_labels, validation_labels = train_test_split(self.data, self.labels, test_size=.334)
 
-        train_generator         = self.datagen.flow(self.train_samples, train_labels, batch_size=32)
-        validation_generator    = self.datagen.flow(validation_samples , validation_labels , batch_size=32)
+        train_generator         = self.datagen.flow(self.train_samples, train_labels, batch_size=batch_size)
+        validation_generator    = self.datagen.flow(validation_samples , validation_labels , batch_size=batch_size)
 
 
         train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(self.data, self.labels_ce, test_size=.334)
-        self.train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
-        self.validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+        self.train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=batch_size)
+        self.validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=batch_size)
         self.test_ce_generator = self.validation_ce_generator
 
         logger.info("done ...");
@@ -142,20 +147,27 @@ class MyModel:
 
         logger.info("done ...");
 
-    def evaluate(self, epochs=None):
+    ## set steps per epoch
+    def evaluate(self, epochs=None, steps_per_epoch=None):
         if epochs is None:
             epochs = 100
         logger.info("epochs=%s", epochs);
+        if steps_per_epoch is None:
+            steps_per_epoch=int(self.train_samples.shape[0])
+        logger.info("steps_per_epoch=%s", steps_per_epoch);
 
-        self.model.fit_generator(self.train_ce_generator, steps_per_epoch=int(self.train_samples.shape[0]), epochs=epochs,validation_data=self.validation_ce_generator)
+        self.model.fit_generator(self.train_ce_generator, steps_per_epoch=steps_per_epoch, epochs=epochs,validation_data=self.validation_ce_generator)
         self.evaluation = model.evaluate_generator(validation_ce_generator)
 
         logger.info("done ...");
 
-    def evaluate_k(self,epochs=None):
+    def evaluate_k(self,epochs=None, steps_per_epoch=None):
         if epochs is None:
             epochs = 16
         logger.info("epochs=%s", epochs);
+        if steps_per_epoch is None:
+            steps_per_epoch=int(self.data.shape[0]/5)
+        logger.info("steps_per_epoch=%s", steps_per_epoch);
         k_checkpoint_basename = os.path.join(script_vardir, 'CHK_' + self.date_str + '_K')
         kf = KFold (shuffle=True, n_splits=5)
         last_good_model_weights = ''
@@ -169,7 +181,7 @@ class MyModel:
             logger.info("before fit_generator ...")
             history = self.model.fit_generator (generator       = self.datagen.flow(self.data[train_index], self.labels_ce[train_index], batch_size=16),
                                            validation_data = self.datagen.flow(self.data[test_index] , self.labels_ce[test_index] , batch_size=16),
-                                           steps_per_epoch = int(self.data.shape[0]/5),
+                                           steps_per_epoch = steps_per_epoch,
                                            epochs          = epochs,
                                            callbacks       = self.callbacks)
             logger.info("After fit_generator ...")
@@ -195,16 +207,16 @@ class Application:
 
     def handle_stage_one(self, parse_result):
         model = MyModel()
-        model.load_files(parse_result.fromdir)
-        model.add_data_augmentation()
+        model.load_files(parse_result.fromdir, parse_result.limit_input)
+        model.add_data_augmentation(parse_result.batch_size)
         weights = parse_result.weights
         if parse_result.skip_weights:
             weights = None
         model.compile_model(weights)
         if parse_result.eval_k:
-            model.evaluate_k(parse_result.epochs)
+            model.evaluate_k(parse_result.epochs, parse_result.steps_per_epoch)
         else:
-            model.evaluate(parse_result.epochs)
+            model.evaluate(parse_result.epochs, parse_result.steps_per_epoch)
 
     def main(self):
         # pylint: disable=too-many-statements
@@ -220,6 +232,7 @@ class Application:
             default=None, required=False)
 
         apn_current = apn_eventgrid = apn_root.get("stage-one")
+        apn_current.parser.add_argument("--limit-input", dest="limit_input", action="store", default=None, type=int, required=False)
         apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
         apn_current.parser.add_argument("--weights", dest="weights", action="store",
             type=str, default="imagenet", required=False)
@@ -228,6 +241,8 @@ class Application:
         apn_current.parser.add_argument("--eval-k", dest="eval_k", action="store_true",
             default=False, required=False)
         apn_current.parser.add_argument("--epochs", dest="epochs", action="store",
+            type=int, default=None, required=False)
+        apn_current.parser.add_argument("--batch-size", dest="batch_size", action="store",
             type=int, default=None, required=False)
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
@@ -255,6 +270,7 @@ class Application:
             script_vardir = parse_result.vardir
 
         logger.info("start ... script_vardir = %s", script_vardir);
+        os.makedirs(script_vardir, exist_ok=True);
 
         if "handler" in parse_result and parse_result.handler:
             parse_result.handler(parse_result)

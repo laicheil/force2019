@@ -10,9 +10,10 @@ laicheil.force2019.cli --help
 laicheil.force2019.cli stage-one --skip-weights --from ..\force2019-data-000\data-000\
 
 # linux
-laicheil.force2019.cli stage-one --skip-weights --from ../force2019-data-000/data-000/
-laicheil.force2019.cli stage-one --skip-weights --epochs 1 --from ../force2019-data-000/data-000/
+rm -rf var/tbg/
 laicheil.force2019.cli stage-one --skip-weights --epochs 1 --eval-k --from ../force2019-data-000/data-000/
+tensorboard --logdir var/tbg/
+# http://localhost:6006/
 ```
 
 ```bash
@@ -43,17 +44,31 @@ Then first time run
 !pip3 install --user --upgrade --editable force2019
 ```
 
+Clear data
+
+```bash
+!rm -vr var/ # clear data
+```
+
 Run every iteration:
 
 ```bash
+# get code
 !git -C force2019 pull
 !git -C force2019-data-000 pull
-!python3 -m laicheil.force2019.cli stage-one --from force2019-data-000/data-000/
+# run ...
+!python3 -m laicheil.force2019.cli --vardir var/ stage-one --epochs 1 --eval-k --from force2019-data-000/data-000/
+```
+
+```
+from tensorboardcolab import TensorBoardColab
+tbc=TensorBoardColab(graph_path='var/tbg')
 ```
 
 ```bash
 !python3 -m laicheil.force2019.cli stage-one --epochs 1 force2019-data-000/data-000/
 !python3 -m laicheil.force2019.cli stage-one --epochs 1 --eval-k force2019-data-000/data-000/
+!python3 -m laicheil.force2019.cli stage-one --from force2019-data-000/data-000/
 ```
 
 ## load data
@@ -88,4 +103,9 @@ $ laicheil.force2019.cli
 
 ```
 !pip3 install --no-cache-dir --upgrade laicheil.force2019
+```
+
+```
+laicheil.force2019.cli stage-one --skip-weights --from ../force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --skip-weights --epochs 1 --from ../force2019-data-000/data-000/
 ```
