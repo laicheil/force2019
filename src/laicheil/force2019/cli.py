@@ -104,6 +104,11 @@ class Application:
 
         logger.info("done compiling model");
 
+        model.fit_generator(train_ce_generator, steps_per_epoch=int(train_samples.shape[0]), epochs=100,validation_data=validation_ce_generator)
+        evaluation = model.evaluate_generator(validation_ce_generator)
+
+        logger.info("fit done ...");
+
     def main(self):
         # pylint: disable=too-many-statements
         apn_current = apn_root = self.apn_root
