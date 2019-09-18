@@ -6,6 +6,12 @@ laicheil.force2019.cli --help
 laicheil.force2019.cli
 ```
 
+```bash
+## run without installing ...
+python -m src.laicheil.force2019.cli
+python3 -m src.laicheil.force2019.cli
+```
+
 ```
 20190918T092055 iwana@iwana-ub.zoic.eu.org:~/d/github.com/laicheil/force2019
 $ laicheil.force2019.cli --help
@@ -28,4 +34,12 @@ $ laicheil.force2019.cli
 !pip3 install --no-cache-dir --upgrade git+https://github.com/laicheil/force2019.git@master
 from laicheil.force2019 import something
 something()
+```
+
+```
+!pip3 install --no-cache-dir --upgrade git+https://github.com/laicheil/force2019.git@master
+!laicheil.force2019.cli
+```
+
+```
 ```
