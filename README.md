@@ -5,7 +5,12 @@
 ## (so it can be used from anywhere, don't have to be in directory)
 pip3 install --user --upgrade --editable .
 laicheil.force2019.cli --help
-laicheil.force2019.cli
+
+# windows
+laicheil.force2019.cli load_files --skip-weights --from ..\force2019-data-000\data-000/
+
+# linux
+laicheil.force2019.cli load_files --skip-weights --from ../force2019-data-000/data-000/
 ```
 
 ```bash
