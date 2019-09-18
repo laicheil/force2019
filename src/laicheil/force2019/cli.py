@@ -154,6 +154,7 @@ class MyModel:
         kf = KFold (shuffle=True, n_splits=5)
         last_good_model_weights = ''
         k=0
+        folds_map={}
         for train_index, test_index in kf.split(self.data, self.labels_ce):
             print('At fold K=',k,' with ', len(train_index), ' samples out of total ', self.data.shape[0])
             kf_filepath=k_checkpoint_basename + str(k) + '.hdf5'
@@ -162,7 +163,7 @@ class MyModel:
             logger.info("before fit_generator ...")
             history = self.model.fit_generator (generator       = self.datagen.flow(self.data[train_index], self.labels_ce[train_index], batch_size=16),
                                            validation_data = self.datagen.flow(self.data[test_index] , self.labels_ce[test_index] , batch_size=16),
-                                           steps_per_epoch = int(self.data.shape[0]/4),
+                                           steps_per_epoch = int(self.data.shape[0]/5),
                                            epochs          = epochs,
                                            callbacks       = self.callbacks)
             logger.info("After fit_generator ...")
