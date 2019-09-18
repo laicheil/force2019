@@ -33,7 +33,7 @@ from tensorflow.python.keras import backend as K
 import tensorflow as tf
 
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input,Lambda, Dense
+from tensorflow.keras.layers import Input,Lambda, Dense, Flatten
 from tensorflow.image import grayscale_to_rgb
 
 logger = logging.getLogger(__name__)
