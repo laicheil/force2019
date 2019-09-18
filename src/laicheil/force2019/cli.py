@@ -15,6 +15,8 @@ import signal
 import uuid
 import datetime
 import json
+import os
+import numpy as np
 
 from .argparse_tree import ArgParseNode
 from . import __version__
@@ -25,6 +27,25 @@ class Application:
     def __init__(self):
         self.apn_root = ArgParseNode(options={"add_help": True})
 
+    def load_files(self, parse_result):
+        data_path = parse_result.fromdir
+        list_of_files = os.listdir(data_path)
+        num_of_files = len(list_of_files)
+        first_file_path = os.path.join(data_path, list_of_files[0])
+        with open(first_file_path,'r') as read_file:
+          shape_of_files = (num_of_files,) + np.asarray(json.load(read_file)).shape + (1, )
+        data = np.zeros((shape_of_files))
+        labels = np.zeros(num_of_files)
+        for i, filename in enumerate(os.listdir(data_path)):
+            full_path = os.path.join(data_path,filename)
+            labels[i] = int(filename.startswith('good'))
+            with open(full_path,'r') as read_file:
+                data[i, :, :, 0] = np.asarray(json.load(read_file))
+
+        logger.info('labels shape %s', labels.shape)
+        logger.info('data shape %s', data.shape)
+
+
     def main(self):
         # pylint: disable=too-many-statements
         apn_current = apn_root = self.apn_root
@@ -34,6 +55,10 @@ class Application:
         apn_root.parser.add_argument("-v", "--verbose",
             action="count", dest="verbosity",
             help="increase verbosity level")
+
+        apn_current = apn_eventgrid = apn_root.get("load_files")
+        apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
+        apn_current.parser.set_defaults(handler=self.load_files)
 
         parse_result = self.parse_result = apn_root.parser.parse_args(args=sys.argv[1:])
 
