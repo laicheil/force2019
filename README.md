@@ -21,7 +21,11 @@ $ laicheil.force2019.cli
 ```
 
 ```
-!pip3 install laicheil.force2019==0.post0.dev10
+!pip3 install --no-cache-dir --upgrade laicheil.force2019
+```
+
+```
+!pip3 install --no-cache-dir --upgrade git+https://github.com/laicheil/force2019.git@master
 from laicheil.force2019 import something
 something()
 ```

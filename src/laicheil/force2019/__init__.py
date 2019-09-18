@@ -7,3 +7,6 @@ This is a template package
 from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
+
+def something():
+    print("{} : {}".format(__module__, __version__))
