@@ -17,6 +17,9 @@ import datetime
 import json
 
 from .argparse_tree import ArgParseNode
+from . import __version__
+
+logger = logging.getLogger(__name__)
 
 class Application:
     def __init__(self):
@@ -35,7 +38,6 @@ class Application:
         parse_result = self.parse_result = apn_root.parser.parse_args(args=sys.argv[1:])
 
 
-        self._env_prefix = parse_result.env_prefix
         verbosity = parse_result.verbosity
         if verbosity is not None:
             root_logger = logging.getLogger("")
@@ -53,9 +55,7 @@ class Application:
             sys.argv, parse_result, logging.getLogger("").getEffectiveLevel(),
             logger.getEffectiveLevel())
 
-        if parse_result.env_file is not None:
-            EnvFile.load_file(parse_result.env_file)
-
+        logger.info("start ...");
 
         if "handler" in parse_result and parse_result.handler:
             parse_result.handler(parse_result)
