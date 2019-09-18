@@ -8,12 +8,17 @@ laicheil.force2019.cli --help
 
 # windows
 laicheil.force2019.cli stage-one --skip-weights --eval-k --from ..\force2019-data-000\data-000\
+laicheil.force2019.cli stage-one --skip-weights --eval-k --epochs 1 --batch-size 1 --steps-per-epoch 1 --from ..\force2019-data-000\data-000\
 
 # linux
 rm -rf var/tbg/
-laicheil.force2019.cli stage-one --skip-weights --epochs 1 --batch-size 1 --steps-per-epoch 1 --eval-k --from ../force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --skip-weights --eval-k --from ../force2019-data-000/data-000/
+laicheil.force2019.cli stage-one --skip-weights --eval-k --epochs 1 --batch-size 1 --steps-per-epoch 1 --from ../force2019-data-000/data-000/
 tensorboard --logdir var/tbg/
 # http://localhost:6006/
+
+laicheil.force2019.cli visualize --from ../force2019-data-000/data-000/ --to ../force2019-data-000/data-000-viz/
+laicheil.force2019.cli visualize --from ../force2019-data-000/data-001/ --to ../force2019-data-000/data-001-viz/
 ```
 
 ```bash
@@ -58,6 +63,11 @@ Run every iteration:
 !git -C force2019-data-000 pull
 # run ...
 !python3 -m laicheil.force2019.cli --vardir var/ stage-one --epochs 1 --eval-k --from force2019-data-000/data-000/
+```
+
+```bash
+!npm i -s -q --unsafe-perm -g ngrok
+!npm authtoken
 ```
 
 ```

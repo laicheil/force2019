@@ -47,6 +47,7 @@ setuptools.setup(
         "tensorflow>=1.14",
         "scikit-learn>=0.21.3",
         "tensorboard>=1.14.0",
+        "matplotlib>=3.0.3",
     ],
     setup_requires=["pytest-runner", "pytest-pylint"],
     tests_require=["pytest", "pylint"],

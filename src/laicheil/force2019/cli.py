@@ -45,6 +45,8 @@ from sklearn.model_selection import KFold
 
 import tensorflow.keras.callbacks as tfkc
 
+import matplotlib.pyplot
+
 logger = logging.getLogger(__name__)
 
 class MyModel:
@@ -63,6 +65,9 @@ class MyModel:
         self.labels = np.zeros(num_of_files)
         self.labels_ce = np.zeros((num_of_files,2))
         for i, filename in enumerate(os.listdir(data_path)):
+            if not filename.endswith(".json"):
+                logger.debug("Not loading data from %s", filename);
+                continue
             if limit is not None and i >= limit:
                 logger.info("Not loading more files as %s files have been loaded", limit);
                 break
@@ -218,6 +223,19 @@ class Application:
         else:
             model.evaluate(parse_result.epochs, parse_result.steps_per_epoch)
 
+    def handle_visualize(self, parse_result):
+        os.makedirs(parse_result.todir, exist_ok=True);
+        data_path = parse_result.fromdir
+        for i, filename in enumerate(os.listdir(data_path)):
+            if not filename.endswith(".json"):
+                logger.debug("Not loading data from %s", filename);
+                continue
+            full_path = os.path.join(data_path,filename)
+            logger.debug("Loading %s", full_path)
+            with open(full_path,'r') as read_file:
+                data = np.asarray(json.load(read_file))
+                matplotlib.pyplot.imsave(os.path.join(parse_result.todir, os.path.basename(full_path).replace(".json", ".png")), data, format="png")
+
     def main(self):
         # pylint: disable=too-many-statements
         apn_current = apn_root = self.apn_root
@@ -230,6 +248,11 @@ class Application:
         apn_root.parser.add_argument("--vardir",
             action="store", dest="vardir",
             default=None, required=False)
+
+        apn_current = apn_eventgrid = apn_root.get("visualize")
+        apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
+        apn_current.parser.add_argument("--to", dest="todir", action="store", type=str, required=True)
+        apn_current.parser.set_defaults(handler=self.handle_visualize)
 
         apn_current = apn_eventgrid = apn_root.get("stage-one")
         apn_current.parser.add_argument("--limit-input", dest="limit_input", action="store", default=None, type=int, required=False)
