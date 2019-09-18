@@ -44,6 +44,7 @@ setuptools.setup(
         ],
     },
     install_requires=[
+        "tensorflow>=1.14",
     ],
     setup_requires=["pytest-runner", "pytest-pylint"],
     tests_require=["pytest", "pylint"],

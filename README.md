@@ -19,3 +19,9 @@ optional arguments:
 $ laicheil.force2019.cli
 2019-09-18T09:20:59 9466 7feac9aa9680 020:INFO     laicheil.force2019.cli cli:58:main start ...
 ```
+
+```
+!pip3 install laicheil.force2019==0.post0.dev10
+from laicheil.force2019 import something
+something()
+```
