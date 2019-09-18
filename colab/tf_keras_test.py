@@ -176,8 +176,10 @@ for train_index, test_index in kf.split(data, labels_ce):
       'filepath'     : kf_filepath } 
   k += 1
 
-evaluation = model.evaluate_generator(validation_ce_generator)
-predict = model.predict_generator(validation_ce_generator)
+#evaluation = model.evaluate_generator(validation_ce_generator)
+#predict = model.predict_generator(validation_ce_generator)
 
 print(evaluation)
 print(predict)
+type(folds_map)
+print(folds_map)

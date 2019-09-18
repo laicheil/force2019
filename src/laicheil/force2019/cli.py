@@ -187,6 +187,7 @@ class MyModel:
                     'history'      : history,
                     'filepath'     : kf_filepath }
                 k += 1
+        print(folds_map)
 
 class Application:
     def __init__(self):
