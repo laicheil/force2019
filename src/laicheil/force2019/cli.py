@@ -196,6 +196,9 @@ class Application:
         apn_root.parser.add_argument("-v", "--verbose",
             action="count", dest="verbosity",
             help="increase verbosity level")
+        apn_root.parser.add_argument("--vardir",
+            action="store", dest="vardir",
+            default=None, required=False)
 
         apn_current = apn_eventgrid = apn_root.get("stage-one")
         apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
@@ -208,7 +211,6 @@ class Application:
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
         parse_result = self.parse_result = apn_root.parser.parse_args(args=sys.argv[1:])
-
 
         verbosity = parse_result.verbosity
         if verbosity is not None:
@@ -226,6 +228,10 @@ class Application:
         logger.debug("sys.argv = %s, parse_result = %s, logging.level = %s, logger.level = %s",
             sys.argv, parse_result, logging.getLogger("").getEffectiveLevel(),
             logger.getEffectiveLevel())
+
+        global script_vardir
+        if parse_result.vardir is not None:
+            script_vardir = parse_result.vardir
 
         logger.info("start ... script_vardir = %s", script_vardir);
 
