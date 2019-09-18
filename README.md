@@ -7,11 +7,9 @@ pip3 install --user --upgrade --editable .
 laicheil.force2019.cli --help
 
 # windows
-laicheil.force2019.cli load_files --skip-weights --from ..\force2019-data-000\data-000\
 laicheil.force2019.cli stage-one --skip-weights --from ..\force2019-data-000\data-000\
 
 # linux
-laicheil.force2019.cli load_files --skip-weights --from ../force2019-data-000/data-000/
 laicheil.force2019.cli stage-one --skip-weights --from ../force2019-data-000/data-000/
 ```
 
