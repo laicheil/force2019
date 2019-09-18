@@ -73,6 +73,11 @@ class Application:
         train_generator         = datagen.flow(train_samples, train_labels, batch_size=32)
         validation_generator    = datagen.flow(validation_samples , validation_labels , batch_size=32)
 
+
+        train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(data, labels_ce, test_size=.334)
+        train_ce_generator         = datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
+        validation_ce_generator    = datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         #config.gpu_options.per_process_gpu_memory_fraction = 0.33
