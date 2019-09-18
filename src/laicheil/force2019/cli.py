@@ -78,17 +78,17 @@ class MyModel:
             rotation_range=90)
         self.datagen.fit(self.data)
 
-        train_samples, validation_samples, train_labels, validation_labels = train_test_split(self.data, self.labels, test_size=.334)
+        self.train_samples, validation_samples, train_labels, validation_labels = train_test_split(self.data, self.labels, test_size=.334)
 
-        train_generator         = self.datagen.flow(train_samples, train_labels, batch_size=32)
+        train_generator         = self.datagen.flow(self.train_samples, train_labels, batch_size=32)
         validation_generator    = self.datagen.flow(validation_samples , validation_labels , batch_size=32)
 
         train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(self.data, self.labels_ce, test_size=.334)
-        train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
-        validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+        self.train_ce_generator         = self.datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
+        self.validation_ce_generator    = self.datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
         logger.info("done ...");
 
-    def compile_model(self):
+    def compile_model(self, weights):
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         #config.gpu_options.per_process_gpu_memory_fraction = 0.33
@@ -103,7 +103,7 @@ class MyModel:
         #
         ## from grayscale to RGB, Xception needs 3 Channel input
         x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (self.inputs)
-        base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
+        base_model = ResNet50(weights=weights, input_tensor=x,include_top=False)
         output = Flatten()(base_model.output)
         output = Dense(1000, activation='relu')(output)
         output = Dense(100, activation='relu')(output)
@@ -119,8 +119,10 @@ class MyModel:
         logger.info("done ...");
 
     def evaluate(self):
-        self.model.fit_generator(train_ce_generator, steps_per_epoch=int(train_samples.shape[0]), epochs=100,validation_data=validation_ce_generator)
-        self.evaluation = self.model.evaluate_generator(validation_ce_generator)
+        self.model.fit_generator(self.train_ce_generator,
+            steps_per_epoch=int(self.train_samples.shape[0]),
+            epochs=100,validation_data=self.validation_ce_generator)
+        self.evaluation = self.model.evaluate_generator(self.validation_ce_generator)
 
         logger.info("done ...");
 
@@ -132,9 +134,13 @@ class Application:
         model = MyModel()
         model.load_files(parse_result.fromdir)
         model.add_data_augmentation()
-        model.compile_model()
+        weights = parse_result.weights
+        if parse_result.skip_weights:
+            weights = None
+        model.compile_model(weights)
         model.evaluate()
 
+    '''
     def handle_load_files(self, parse_result):
 
         data_path = parse_result.fromdir
@@ -215,6 +221,7 @@ class Application:
         evaluation = model.evaluate_generator(validation_ce_generator)
 
         logger.info("fit done ...");
+    '''
 
     def main(self):
         # pylint: disable=too-many-statements
@@ -232,10 +239,14 @@ class Application:
             type=str, default="imagenet", required=False)
         apn_current.parser.add_argument("--skip-weights", dest="skip_weights", action="store_true",
             default=False, required=False)
-        apn_current.parser.set_defaults(handler=self.handle_load_files)
+        apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
         apn_current = apn_eventgrid = apn_root.get("stage-one")
         apn_current.parser.add_argument("--from", dest="fromdir", action="store", type=str, required=True)
+        apn_current.parser.add_argument("--weights", dest="weights", action="store",
+            type=str, default="imagenet", required=False)
+        apn_current.parser.add_argument("--skip-weights", dest="skip_weights", action="store_true",
+            default=False, required=False)
         apn_current.parser.set_defaults(handler=self.handle_stage_one)
 
         parse_result = self.parse_result = apn_root.parser.parse_args(args=sys.argv[1:])
