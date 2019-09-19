@@ -7,13 +7,9 @@ Original file is located at
     https://colab.research.google.com/drive/1WxEW2OdflyYj4mz54kwHVwTpwESCFFnb
 """
 
-!pip3 install  --upgrade laicheil.force2019==0.post0.dev6
-from laicheil.force2019 import something
-something()
-
 from tensorflow.python.client import device_lib
 import numpy as np
-device_lib.list_local_devices()
+#device_lib.list_local_devices()
 
 """Upload the data files"""
 
@@ -29,29 +25,59 @@ uploaded = files.upload()
 !unzip hackathon_training_data.zip -d hackathon_training_data
 !ls hackathon_training_data/
 
+#clone the datasets repository
+!\rm -r force2019-data-000; git clone https://github.com/laicheil/force2019-data-000.git;ls force2019-data-000/
+
+from google.colab import drive
+drive.mount('/content/drive')
+
 import os
 import json
-data_path = 'hackathon_training_data'
+#data_path = os.path.join('force2019-data-000', 'data-001')#'hackathon_training_data'
+data_path = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'data-002') 
+num_of_files = 0
 list_of_files = os.listdir(data_path)
-num_of_files = len(list_of_files)
+for filename in list_of_files:
+  num_of_files = max (num_of_files,int(filename.split('.')[0].split('_')[-1]))
+num_of_files
+num_of_files *= 2
+#num_of_files = len(list_of_files)
 first_file_path = os.path.join(data_path, list_of_files[0])
 #print (first_file_path)
 with open(first_file_path,'r') as read_file:
-  shape_of_files = (num_of_files,) + np.asarray(json.load(read_file)).shape + (1, )
+  shape_of_files = (num_of_files,) + np.asarray(json.load(read_file)).shape + (2, )
 #print (shape_of_files)
+
+
 data = np.zeros((shape_of_files))
 labels = np.zeros(num_of_files)
 labels_ce = np.zeros((num_of_files,2))
-for i, filename in enumerate(os.listdir(data_path)):
+for filename in os.listdir(data_path):
+
+  if not filename.startswith('seismic'):
+    splitted_name = filename.split('.')[0].split('_')
+    if splitted_name[1] == 'seismic':
+      continue
+    chan = int(splitted_name[0]=='topa')
+    i = int(splitted_name[-1])
+    is_good = int (splitted_name[1] is 'good')
     full_path = os.path.join(data_path,filename)
-    labels[i] = int(filename.startswith('good'))
-    labels_ce[i, int(filename.startswith('good'))] = 1
+    labels[i] = is_good #int(filename.startswith('good'))
+    labels_ce[i, is_good] = 1
     with open(full_path,'r') as read_file:
-        data[i, :, :, 0] = np.asarray(json.load(read_file))
+        loaded = np.asarray(json.load(read_file))
+        mask = np.zeros_like(loaded)
+        mask[np.argwhere(loaded > 999990)] = 1
+        data[i, :, :, chan] = loaded
 
 print('labels shape', labels.shape)
 print('labels for CE shape', labels_ce.shape)
 print('data shape', data.shape)
+
+data.shape
+loaded.shape
+i
+#data[i, :, :, chan] = loaded
 
 print(labels)
 print(os.listdir(data_path))
@@ -62,8 +88,10 @@ from tensorflow.keras.preprocessing import image
 from sklearn.model_selection import train_test_split
 
 datagen = image.ImageDataGenerator (
-    featurewise_center = True,
-    featurewise_std_normalization=True,
+    #featurewise_center = True,
+    #featurewise_std_normalization=True,
+    #samplewise_center = True,
+    #samplewise_std_normalization=True,
     vertical_flip=True,
     horizontal_flip=True,
     rotation_range=90)
@@ -101,50 +129,74 @@ print('DONE LOADING MODEL')
 
 """Callbacks"""
 
-import datetime
+import tensorflow.keras.callbacks as tfkc
+import datetimeimport tensorflow.keras.callbacks as tfkc
 
 now = datetime.datetime.now ()
 date_str = now.strftime('%Y%m%d%H%M')
 checkpoint_init_name = 'init_chkpnt_'+date_str+'.hdf5'
 from tensorflow.python.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 callbacks = [ 
+      
         EarlyStopping (monitor='val_acc', patience=9, verbose=1),
-        ModelCheckpoint(checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1)
+        ModelCheckpoint(checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1),
+        tfkc.TensorBoard(log_dir=os.path.join('/content/drive/My Drive/force-hackathon-2019', 'tbg', now.strftime('%Y%m%d%H%M%S')), histogram_freq=0, write_graph=True, write_images=True)
         ]
 
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input,Lambda, Dense, Flatten
-from tensorflow.image import grayscale_to_rgb
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout
+def simpleNet (input_tensor=None):
+  if input_tensor is None:
+    return None
+  def convBlock (units, input_tensor):
+    x = Conv2D(units, (3, 3), padding='same', activation = 'relu')(input_tensor)
+    x = Conv2D(units, (3, 3), activation = 'relu')(x)
+    x = MaxPooling2D(pool_size=(2, 2)) (x)
+    x = Dropout(0.25) (x)
+    return x
+  
+  t = convBlock(32, input_tensor)
+  t = convBlock(64, t)
+  return t
 
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input,Lambda, Dense, Flatten, Dropout
+from tensorflow.image import grayscale_to_rgb
+use_resnet = False
 ## inputs
 inputs = Input (shape=data.shape[1:])#samples.shape[1:]
-#
-## from grayscale to RGB, Xception needs 3 Channel input
-x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs) 
-base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
-output = Flatten()(base_model.output)
-output = Dense(1000, activation='relu')(output)
-output = Dense(100, activation='relu')(output)
+
+# the base model
+if use_resnet:
+  x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
+  base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
+  num_layers = len(base_model.layers)
+  for i, layer in enumerate (base_model.layers):
+    layer.trainable = i < 8 or i > num_layers-8
+  # from grayscale to RGB, Xception needs 3 Channel input
+  x = base_model.output
+else:
+  x = simpleNet(inputs)
+  
+# FC output layers
+output = Flatten()(x)
+output = Dense(512, activation='relu')(output)
+output = Dropout(0.5)(output)
+output = Dense(256, activation='relu')(output)
+output = Dropout(0.5)(output)
 output = Dense(2, activation='softmax')(output)
-## The model
-num_layers = len(base_model.layers)
-#for i, layer in enumerate (base_model.layers):
-#  layer.trainable = i < 8 or i > num_layers-8
+
 model = Model (inputs=inputs, outputs=output)
 model.compile(optimizer='nadam',
               loss='categorical_crossentropy',
               metrics=['accuracy'])
+#model.summary()
 
-print(model.output_shape)
+print(base_model.output_shape)
 
-"""Train"""
+"""Train
 
-model.fit_generator(train_ce_generator, steps_per_epoch=int(train_samples.shape[0]), epochs=100,validation_data=validation_ce_generator)
-evaluation = model.evaluate_generator(validation_ce_generator)
-
-print(evaluation)
-
-"""Train using kfold"""
+Train using kfold
+"""
 
 from sklearn.model_selection import KFold
 
@@ -176,10 +228,22 @@ for train_index, test_index in kf.split(data, labels_ce):
       'filepath'     : kf_filepath } 
   k += 1
 
-#evaluation = model.evaluate_generator(validation_ce_generator)
-#predict = model.predict_generator(validation_ce_generator)
+model.load_weights('CHK_201909181440_K3.hdf5')
+evaluation = model.evaluate_generator(validation_ce_generator)
+predict = model.predict_generator(validation_ce_generator)
 
 print(evaluation)
 print(predict)
+print(validation_labels)
 type(folds_map)
 print(folds_map)
+
+indices = np.random.random_integers(0, train_samples.shape[0], 5)
+print(indices)
+test = train_samples[indices]
+#model.save_weights('last_iteration.hdf5')
+model.load_weights('CHK_201909181412_K0.hdf5')#checkpoint_init_name)
+pred = model.predict(test)
+print (pred)
+print (np.argmax(pred,axis=1))
+print (labels[indices])

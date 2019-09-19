@@ -16,9 +16,6 @@ laicheil.force2019.cli stage-one --skip-weights --eval-k --from ../force2019-dat
 laicheil.force2019.cli stage-one --skip-weights --eval-k --epochs 1 --batch-size 1 --steps-per-epoch 1 --from ../force2019-data-000/data-000/
 tensorboard --logdir var/tbg/
 # http://localhost:6006/
-
-laicheil.force2019.cli visualize --from ../force2019-data-000/data-000/ --to ../force2019-data-000/data-000-viz/
-laicheil.force2019.cli visualize --from ../force2019-data-000/data-001/ --to ../force2019-data-000/data-001-viz/
 ```
 
 ```bash
@@ -118,4 +115,28 @@ $ laicheil.force2019.cli
 ```
 laicheil.force2019.cli stage-one --skip-weights --from ../force2019-data-000/data-000/
 laicheil.force2019.cli stage-one --skip-weights --epochs 1 --from ../force2019-data-000/data-000/
+```
+
+Mount data from gdrive
+
+```
+from google.colab import drive
+drive.mount('/content/drive')
+!ls -al /content/drive/'My Drive'/force-hackathon-2019/data-000/ | head
+!ls -al /content/drive/'My Drive'/force-hackathon-2019/data-001/ | head
+!ls -al /content/drive/'My Drive'/force-hackathon-2019/data-002/ | head
+```
+
+```
+rclone copy ../force2019-data-000/data-000/ iwana-rxar-gdrive:/force-hackathon-2019/data-000/
+laicheil.force2019.cli visualize --from ../force2019-data-000/data-000/ --to ../force2019-data-000/data-000-viz/
+rclone copy ../force2019-data-000/data-000-viz/ iwana-rxar-gdrive:/force-hackathon-2019/data-000-viz/
+
+rclone copy ../force2019-data-000/data-001/ iwana-rxar-gdrive:/force-hackathon-2019/data-001/
+laicheil.force2019.cli visualize --from ../force2019-data-000/data-001/ --to ../force2019-data-000/data-001-viz/
+rclone copy ../force2019-data-000/data-001-viz/ iwana-rxar-gdrive:/force-hackathon-2019/data-001-viz/
+
+rclone copy ../force2019-data-000/data-002/ iwana-rxar-gdrive:/force-hackathon-2019/data-002/
+laicheil.force2019.cli visualize --from ../force2019-data-000/data-002/ --to ../force2019-data-000/data-002-viz/
+rclone copy ../force2019-data-000/data-002-viz/ iwana-rxar-gdrive:/force-hackathon-2019/data-002-viz/
 ```
