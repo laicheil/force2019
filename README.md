@@ -34,6 +34,11 @@ something()
 !laicheil.force2019.cli
 ```
 
+```
+!curl --silent https://raw.githubusercontent.com/laicheil/force2019/master/extra/setup-colab.sh | bash
+!bash <(curl --silent https://raw.githubusercontent.com/laicheil/force2019/master/extra/setup-colab.sh)
+```
+
 ## run from git in colab
 
 Go to https://colab.research.google.com

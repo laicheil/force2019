@@ -7,6 +7,8 @@ Original file is located at
     https://colab.research.google.com/drive/1WxEW2OdflyYj4mz54kwHVwTpwESCFFnb
 """
 
+!curl --silent https://raw.githubusercontent.com/laicheil/force2019/master/extra/setup-colab.sh | bash
+
 from tensorflow.python.client import device_lib
 import numpy as np
 #device_lib.list_local_devices()
@@ -34,49 +36,69 @@ drive.mount('/content/drive')
 import os
 import json
 #data_path = os.path.join('force2019-data-000', 'data-001')#'hackathon_training_data'
-data_path = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'data-002') 
-num_of_files = 0
-list_of_files = os.listdir(data_path)
+data_path = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'data-004') 
+num_of_sample = 0
+list_of_files = [f for f in os.listdir(data_path) if f.startswith('zone')]
 for filename in list_of_files:
-  num_of_files = max (num_of_files,int(filename.split('.')[0].split('_')[-1]))
-num_of_files
-num_of_files *= 2
-#num_of_files = len(list_of_files)
+  num_of_sample = max (num_of_sample,int(filename.split('.')[0].split('_')[-1]))
+num_of_sample +=1 #numbering starts from 0
+
+num_of_files = len(list_of_files)
 first_file_path = os.path.join(data_path, list_of_files[0])
-#print (first_file_path)
+
+num_chan = 3
+num_smp = num_of_sample * 2 # Good & Bad
 with open(first_file_path,'r') as read_file:
-  shape_of_files = (num_of_files,) + np.asarray(json.load(read_file)).shape + (2, )
-#print (shape_of_files)
+  shape_of_files = (num_smp,) + np.asarray(json.load(read_file)).shape + (num_chan, )
 
-
+# the shape of the data is (num_smp, width, length, chanels)
 data = np.zeros((shape_of_files))
-labels = np.zeros(num_of_files)
-labels_ce = np.zeros((num_of_files,2))
-for filename in os.listdir(data_path):
 
-  if not filename.startswith('seismic'):
-    splitted_name = filename.split('.')[0].split('_')
-    if splitted_name[1] == 'seismic':
-      continue
-    chan = int(splitted_name[0]=='topa')
-    i = int(splitted_name[-1])
-    is_good = int (splitted_name[1] is 'good')
-    full_path = os.path.join(data_path,filename)
-    labels[i] = is_good #int(filename.startswith('good'))
-    labels_ce[i, is_good] = 1
-    with open(full_path,'r') as read_file:
-        loaded = np.asarray(json.load(read_file))
-        mask = np.zeros_like(loaded)
-        mask[np.argwhere(loaded > 999990)] = 1
-        data[i, :, :, chan] = loaded
+# labels are a vector the size of the number of sumples
+labels = np.zeros(num_smp)
+
+# labels for categorical crossentropy are a matrix of num_smp X num_classes
+labels_ce = np.zeros((num_smp,2))
+
+for filename in os.listdir(data_path):
+  splitted_name = filename.split('.')[0].split('_')
+  
+  # Horizon A, B and C are on different channels
+  chan = 0
+  first_arg = splitted_name[0]
+  if first_arg.startswith('zonea'):
+    chan = 0
+  elif first_arg.startswith('zoneb'):
+    chan = 1
+  elif first_arg.startswith('zonec'):
+    chan = 2
+
+  # calculate the index of the data (if data belongs to the "Good" class I shift it)
+  i = int(splitted_name[-1])
+  is_good = int (splitted_name[1] == 'good')
+  i += (num_of_sample) * is_good 
+
+  full_path = os.path.join(data_path,filename)
+  labels[i] = is_good #int(filename.startswith('good'))
+  labels_ce[i, is_good] = 1
+  with open(full_path,'r') as read_file:
+    from_json = json.load(read_file)
+    loaded = np.asarray(from_json, dtype=np.float)
+
+    std  = np.nanstd(loaded)
+    mean = np.nanmean(loaded)
+    vmin = np.nanmin(loaded)
+    vmax = np.nanmax(loaded)
+    vrange = np.abs(vmax-vmin)
+    loaded = (loaded - std) / mean 
+    loaded [np.isnan(loaded)] = 0
+    data[i, :, :, chan] = loaded
 
 print('labels shape', labels.shape)
 print('labels for CE shape', labels_ce.shape)
 print('data shape', data.shape)
 
-data.shape
-loaded.shape
-i
+print((from_json))
 #data[i, :, :, chan] = loaded
 
 print(labels)
@@ -94,18 +116,18 @@ datagen = image.ImageDataGenerator (
     #samplewise_std_normalization=True,
     vertical_flip=True,
     horizontal_flip=True,
-    rotation_range=90)
+    rotation_range=180)
 datagen.fit (data)
 
 train_samples, validation_samples, train_labels, validation_labels = train_test_split(data, labels, test_size=.334)
 
-train_generator         = datagen.flow(train_samples, train_labels, batch_size=32)
-validation_generator    = datagen.flow(validation_samples , validation_labels , batch_size=32)
+train_generator         = datagen.flow(train_samples, train_labels, batch_size=16)
+validation_generator    = datagen.flow(validation_samples , validation_labels , batch_size=16)
 
 
-train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(data, labels_ce, test_size=.334)
-train_ce_generator         = datagen.flow(train_samples_ce, train_labels_ce, batch_size=32)
-validation_ce_generator    = datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=32)
+train_samples_ce, validation_samples_ce, train_labels_ce, validation_labels_ce = train_test_split(data, labels_ce, test_size=.25)
+train_ce_generator         = datagen.flow(train_samples_ce, train_labels_ce, batch_size=16)
+validation_ce_generator    = datagen.flow(validation_samples_ce , validation_labels_ce , batch_size=16)
 
 test_ce_generator = validation_ce_generator
 
@@ -130,17 +152,21 @@ print('DONE LOADING MODEL')
 """Callbacks"""
 
 import tensorflow.keras.callbacks as tfkc
-import datetimeimport tensorflow.keras.callbacks as tfkc
+import datetime
+
 
 now = datetime.datetime.now ()
 date_str = now.strftime('%Y%m%d%H%M')
+
+tbc_dir = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'tbg', date_str)
+os.makedirs(tbc_dir, exist_ok=True)
+
 checkpoint_init_name = 'init_chkpnt_'+date_str+'.hdf5'
 from tensorflow.python.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 callbacks = [ 
-      
         EarlyStopping (monitor='val_acc', patience=9, verbose=1),
         ModelCheckpoint(checkpoint_init_name, monitor='val_acc', save_best_only=True, save_weights_only=True, verbose=1),
-        tfkc.TensorBoard(log_dir=os.path.join('/content/drive/My Drive/force-hackathon-2019', 'tbg', now.strftime('%Y%m%d%H%M%S')), histogram_freq=0, write_graph=True, write_images=True)
+        tfkc.TensorBoard(log_dir=tbc_dir, histogram_freq=1, write_graph=True, write_images=True)
         ]
 
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout
@@ -161,13 +187,13 @@ def simpleNet (input_tensor=None):
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input,Lambda, Dense, Flatten, Dropout
 from tensorflow.image import grayscale_to_rgb
-use_resnet = False
+use_resnet = True
 ## inputs
 inputs = Input (shape=data.shape[1:])#samples.shape[1:]
 
 # the base model
 if use_resnet:
-  x = Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
+  x = inputs #Lambda (lambda x: grayscale_to_rgb (x), name='grayscale_to_rgb') (inputs)
   base_model = ResNet50(weights='imagenet', input_tensor=x,include_top=False)
   num_layers = len(base_model.layers)
   for i, layer in enumerate (base_model.layers):
@@ -211,8 +237,8 @@ for train_index, test_index in kf.split(data, labels_ce):
   callbacks[-1].filepath = kf_filepath
   history = model.fit_generator (generator       = datagen.flow(data[train_index], labels_ce[train_index], batch_size=16), 
                                  validation_data = datagen.flow(data[test_index] , labels_ce[test_index] , batch_size=16),
-                                 steps_per_epoch = int(data.shape[0]/5), 
-                                 epochs          = 16, 
+                                 steps_per_epoch = int(data.shape[0]/8), 
+                                 epochs          = 20, 
                                  callbacks       = callbacks)
   if os.path.isfile(kf_filepath):
     #model.load_weights (kf_filepath) #Load best
@@ -228,7 +254,16 @@ for train_index, test_index in kf.split(data, labels_ce):
       'filepath'     : kf_filepath } 
   k += 1
 
-model.load_weights('CHK_201909181440_K3.hdf5')
+"""Run without cross-validation"""
+
+callbacks[-1].filepath = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'last_chk_pnt.hdf5')
+
+history = model.fit_generator (generator       = datagen.flow(data, labels_ce, batch_size=16), 
+                               steps_per_epoch = int(data.shape[0]/8), 
+                               epochs          = 20, 
+                               callbacks       = callbacks)
+
+#model.load_weights('CHK_201909181440_K3.hdf5')
 evaluation = model.evaluate_generator(validation_ce_generator)
 predict = model.predict_generator(validation_ce_generator)
 
@@ -238,12 +273,51 @@ print(validation_labels)
 type(folds_map)
 print(folds_map)
 
-indices = np.random.random_integers(0, train_samples.shape[0], 5)
+indices = np.random.random_integers(0, 198, 100)#train_samples.shape[0]
 print(indices)
-test = train_samples[indices]
-#model.save_weights('last_iteration.hdf5')
-model.load_weights('CHK_201909181412_K0.hdf5')#checkpoint_init_name)
+test = data[indices]
+weights_path = os.path.join('/content/drive/My Drive/force-hackathon-2019', 'weights')
+#os.makedirs(weights_path, exist_ok=True)
+weights_name = os.path.join(weights_path,'last_iteration'+now.strftime('%Y%m%d%H%M')+'.hdf5')
+#model.save_weights(weights_name)
+#print(os.path.isfile(weights_name))
+#model.load_weights('CHK_201909181412_K0.hdf5')#checkpoint_init_name)
+#model.load_weights('init_chkpnt_201909190935.hdf5')
+#model.load_weights(weights_name)
 pred = model.predict(test)
+
 print (pred)
+#print (model.evaluate(test[0:2]))
 print (np.argmax(pred,axis=1))
 print (labels[indices])
+preds = np.argmax(pred,axis=1)
+actual= labels[indices].astype(int)
+for i,ind in enumerate(indices):
+  correct_ind = ind
+  if ind < 100:
+    class_name =  "Bad"
+  else:
+    class_name = "Good"
+    correct_ind -= 100
+
+  if preds[i] == 0:
+    should_be = "Bad"
+  else:
+    should_be = "Good"
+  success = actual[i] == preds[i]
+  
+  print ('File Number', correct_ind, ', Class=', class_name, ', Predicted=', should_be, ',Prediction Successful=', success)
+
+for i in [ 40, 120,  87,  75, 117]:
+  if i < 100:
+    print ('"bad" class, index', i, ', classified correctly')
+  else:
+    print ('"good" class, index', i-100, ', classified correctly')
+
+print (np.argmax(pred,axis=1) and int (labels[indices]))
+
+!date ; ls -l init_chkpnt_201909190935.hdf5; pwd;  ls -l; cp init_chkpnt_201909190935.hdf5 /content/drive/My\ Drive/force-hackathon-2019/weights/. ; ls /content/drive/My\ Drive/force-hackathon-2019/weights -tl ; chmod a+rwx /content/drive/My\ Drive/force-hackathon-2019/weights/ ; echo !$; ls -lt !$
+
+!ls /content/drive/My\ Drive/force-hackathon-2019/weights -tl
+!chmod -R 777 /content/drive/My\ Drive/force-hackathon-2019/weights
+!ls /content/drive/My\ Drive/force-hackathon-2019/weights -tl

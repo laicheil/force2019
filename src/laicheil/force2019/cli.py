@@ -233,8 +233,19 @@ class Application:
             full_path = os.path.join(data_path,filename)
             logger.debug("Loading %s", full_path)
             with open(full_path,'r') as read_file:
-                data = np.asarray(json.load(read_file))
-                matplotlib.pyplot.imsave(os.path.join(parse_result.todir, os.path.basename(full_path).replace(".json", ".png")), data, format="png")
+                #data = np.asarray(json.load(read_file))
+                #matplotlib.pyplot.imsave(os.path.join(parse_result.todir, os.path.basename(full_path).replace(".json", ".png")), data, format="png")
+                from_json = json.load(read_file)
+                loaded = np.asarray(from_json, dtype=np.float)
+                std  = np.nanstd(loaded)
+                mean = np.nanmean(loaded)
+                vmin = np.nanmin(loaded)
+                vmax = np.nanmax(loaded)
+                vrange = np.abs(vmax-vmin)
+                loaded = (loaded - std) / mean
+                loaded [np.isnan(loaded)] = 0
+                #data = np.asarray(json.load(read_file))
+                matplotlib.pyplot.imsave(os.path.join(parse_result.todir, os.path.basename(full_path).replace(".json", ".png")), loaded, format="png")
 
     def main(self):
         # pylint: disable=too-many-statements
@@ -299,7 +310,6 @@ class Application:
 
         if "handler" in parse_result and parse_result.handler:
             parse_result.handler(parse_result)
-
 
 def main():
 
